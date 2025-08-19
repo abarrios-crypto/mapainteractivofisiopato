@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Encuadre: Fisiopatología</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #c8a2a2; /* Rosa viejo */
+      --secondary: #d4afaf; /* Rosa palo */
+      --accent: #b58a8a; /* Rosa tierra */
+      --light: #fdf2f2; /* Fondo claro */
+      --dark: #7a4e4e; /* Texto oscuro */
+      --text: #4a3535;
+      --glow: 0 0 20px rgba(212, 175, 175, 0.6);
+    }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: linear-gradient(135deg, var(--primary), #b58a8a, var(--dark));
+      margin: 0;
+      padding: 20px;
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    h1 {
+      color: var(--secondary);
+      text-align: center;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      color: var(--light);
+      text-align: center;
+      max-width: 800px;
+      margin: 10px auto 30px;
+      font-size: 1.1em;
+      font-style: italic;
+    }
+
+    #board-container {
+      position: relative;
+      width: 100%;
+      margin: 40px auto;
+    }
+
+    /* --- ESPACIO PARA EL ESPIRAL (PC) --- */
+    .spiral-container {
+      width: 800px;
+      height: 800px;
+      margin: 60px auto;
+      position: relative;
+    }
+    .tile-spiral {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      transition: all 0.4s ease;
+    }
+
+    /* --- CAMINO VERTICAL (MÓVIL) --- */
+    .mobile-path {
+      display: none;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .mobile-path.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      padding: 20px 0;
+    }
+    .tile-mobile {
+      width: 100%;
+      max-width: 360px;
+      height: 80px;
+      background: var(--primary);
+      color: var(--light);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: all 0.4s ease;
+      font-size: 12px;
+      text-align: center;
+      padding: 8px;
+      border: 1px solid rgba(212, 175, 175, 0.3);
+    }
+    .tile-mobile i {
+      font-size: 16px;
+    }
+    .tile-mobile.locked {
+      background: #999;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .tile-mobile.completed {
+      background: var(--secondary);
+      color: var(--dark);
+    }
+    .tile-mobile.unit {
+      background: var(--dark);
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    /* Estilos comunes */
+    .tile-spiral, .tile-mobile {
+      border-radius: 14px;
+      color: var(--light);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      border: 1px solid rgba(212, 175, 175, 0.3);
+    }
+    .tile-spiral:hover, .tile-mobile:hover:not(.locked) {
+      transform: scale(1.12);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      border-color: var(--secondary);
+    }
+
+    /* Efecto de "encendido" */
+    .active-tile {
+      transform: scale(1.15) !important;
+      box-shadow: var(--glow), 0 0 30px rgba(212, 175, 175, 0.8) !important;
+      z-index: 100 !important;
+      border-color: var(--secondary) !important;
+    }
+
+    .inactive-tile {
+      filter: brightness(0.7) blur(0.5px);
+      transform: scale(0.95);
+      z-index: 1;
+    }
+
+    /* Meta final */
+    .center-goal, .final-goal {
+      background: var(--secondary);
+      color: var(--dark);
+      font-weight: bold;
+      animation: pulse 2s infinite;
+      z-index: 20;
+      border: 2px solid #c9a9a6;
+    }
+    .center-goal {
+      position: absolute;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(212, 175, 175, 0.9);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .final-goal {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 360px;
+      height: 110px;
+      border-radius: 18px;
+      margin: 20px auto;
+      box-shadow: 0 0 30px rgba(212, 175, 175, 0.8);
+      border: 2px solid #c9a9a6;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 25px rgba(212, 175, 175, 0.8); }
+      50% { box-shadow: 0 0 40px rgba(212, 175, 175, 1); }
+      100% { box-shadow: 0 0 25px rgba(212, 175, 175, 0.8); }
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal-content {
+      background: var(--light);
+      padding: 30px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 700px;
+      text-align: left;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 1px solid var(--secondary);
+    }
+    .close {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      color: var(--dark);
+    }
+    .close:hover {
+      color: var(--primary);
+    }
+    .topic-list {
+      margin: 15px 0;
+      padding-left: 20px;
+      color: var(--text);
+    }
+    .topic-list li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    .btn-next, .btn-contract, .btn-print, .btn-close {
+      background: var(--primary);
+      color: var(--light);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 10px 5px;
+      text-decoration: none;
+      display: inline-block;
+      font-family: 'Georgia', serif;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .btn-contract {
+      background: var(--secondary);
+      color: var(--dark);
+    }
+    .btn-print {
+      background: var(--accent);
+    }
+    .btn-close {
+      background: #555;
+    }
+    .btn-next:hover, .btn-contract:hover, .btn-print:hover, .btn-close:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Contrato Modal */
+    .contract-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      overflow-y: auto;
+    }
+    .contract-content {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+      border: 2px solid var(--secondary);
+      font-family: 'Georgia', serif;
+    }
+    .form-group {
+      margin: 15px 0;
+    }
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: var(--dark);
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .signature-area {
+      border: 2px dashed var(--accent);
+      height: 120px;
+      margin: 20px 0;
+      position: relative;
+      background: #fdf6f2;
+      touch-action: none;
+    }
+    .clear-signature {
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--accent);
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    .checkbox-group {
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+    }
+    .checkbox-group input {
+      margin-right: 8px;
+      transform: scale(1.3);
+      accent-color: var(--accent);
+    }
+    .checkbox-group label {
+      font-size: 14px;
+      color: var(--dark);
+    }
+    .contract-content h2 {
+      color: var(--primary);
+      text-align: center;
+      border-bottom: 2px solid var(--secondary);
+      padding-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 id="title">🎓 Fisiopatología: Encuadre</h1>
+  <p class="subtitle">Un viaje académico desde los fundamentos hasta la vanguardia biomédica.</p>
+
+  <div id="board-container"></div>
+
+  <!-- Modal -->
+  <div class="modal" id="infoModal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle"></h2>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Formulario para llenar datos -->
+  <div class="contract-modal" id="formModal">
+    <div class="contract-content">
+      <h2>🖋️ Completa tus datos y firma</h2>
+      <form id="contractForm">
+        <div class="form-group">
+          <label for="nombre">Nombre completo *</label>
+          <input type="text" id="nombre" required>
+        </div>
+        <div class="form-group">
+          <label for="matricula">Matrícula (opcional)</label>
+          <input type="text" id="matricula">
+        </div>
+        <div class="form-group">
+          <label for="gradoGrupo">Grado y grupo (ej. Tercer semestre, grupo A) *</label>
+          <input type="text" id="gradoGrupo" required>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="accept" required>
+          <label for="accept">Acepto que he leído y comprendido el encuadre del curso.</label>
+        </div>
+        <p><strong>Firma digital *</strong></p>
+        <div class="signature-area" id="signature-pad-form"></div>
+        <p class="clear-signature" onclick="clearSignatureForm()">🗑️ Borrar firma</p>
+        <div style="margin-top: 20px; text-align: right;">
+          <button type="button" class="btn-close" onclick="closeForm()">Cancelar</button>
+          <button type="button" class="btn-next" onclick="submitForm()">Continuar →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal del Contrato (para imprimir) -->
+  <div class="contract-modal" id="contractModal">
+    <div class="contract-content" id="contractPrintArea">
+      <h2 style="text-align: center;">📜 Contrato de Compromiso del Estudiante</h2>
+      <p style="text-align: center; font-style: italic;"><em>Unidad de Aprendizaje: Fisiopatología</em></p>
+      <br>
+      <p>Yo, <strong id="cNombre"></strong>, matrícula <span id="cMatricula"></span>, estudiante del <span id="cGrado"></span>, grupo <span id="cGrupo"></span>, declaro bajo protesta de decir verdad que:</p>
+      <br>
+      <ol>
+        <li>He leído y comprendido el <strong>programa de estudio y encuadre</strong> de la unidad de aprendizaje de Fisiopatología.</li>
+        <li>Conozco las <strong>competencias</strong>, <strong>unidades temáticas</strong>, <strong>actividades</strong> y <strong>criterios de evaluación</strong> del curso.</li>
+        <li>Me comprometo a participar activamente, cumplir con las actividades y respetar el proceso enseñanza-aprendizaje.</li>
+        <li>Entiendo que el uso de TICs, el trabajo colaborativo y la ética académica son fundamentales en este curso.</li>
+      </ol>
+      <br>
+      <p>Por lo tanto, firmo el presente documento como acto de compromiso con mi formación biomédica.</p>
+      <br>
+      <p><strong>Lugar y fecha:</strong> Culiacán, Sinaloa, a <span id="cFecha"></span></p>
+      <br>
+      <p><strong>Firma del estudiante:</strong></p>
+      <canvas id="signature-print" width="400" height="120" style="border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%;"></canvas>
+      <br>
+      <p><strong>Nombre:</strong> <span id="cNombre2"></span></p>
+      <p><strong>Matrícula:</strong> <span id="cMatricula2"></span></p>
+      <p><strong>Grado y grupo:</strong> <span id="cGradoGrupo"></span></p>
+    </div>
+    <div style="margin-top: 20px; text-align: center;">
+      <button class="btn-print" onclick="printContract()">🖨️ Imprimir Contrato</button>
+      <button class="btn-close" onclick="closeContract()">Cerrar</button>
+    </div>
+  </div>
+
+  <script>
+    // Canvas para firma
+    let canvasForm, ctxForm;
+    let isDrawing = false;
+
+    const tiles = [
+      { id: "inicio", label: "Inicio", sub: "", type: "normal", icon: "fa-home" },
+      { id: "unidad1", label: "Unidad I", sub: "Fundamentos", type: "unit", icon: "fa-book" },
+      { id: "I1", label: "I.1", sub: "Introducción", type: "normal", icon: "fa-info-circle" },
+      { id: "I2", label: "I.2", sub: "Bases Celulares", type: "normal", icon: "fa-dna" },
+      { id: "II", label: "Unidad II", sub: "Órganos y Sistemas", type: "unit", icon: "fa-heartbeat" },
+      { id: "II1", label: "II.1", sub: "Estudio General", type: "normal", icon: "fa-network-wired" },
+      { id: "II2", label: "II.2", sub: "Marcadores", type: "normal", icon: "fa-vial" },
+      { id: "III", label: "Unidad III", sub: "Enfermedades", type: "unit", icon: "fa-notes-medical" },
+      { id: "III1", label: "III.1", sub: "Inmunológica", type: "normal", icon: "fa-shield-alt" },
+      { id: "III2", label: "III.2", sub: "Infecciosas", type: "normal", icon: "fa-bacteria" },
+      { id: "III3", label: "III.3", sub: "Metabólicas", type: "normal", icon: "fa-apple-alt" },
+      { id: "III4", label: "III.4", sub: "Neurológicas", type: "normal", icon: "fa-brain" },
+      { id: "III5", label: "III.5", sub: "Oncológicas", type: "normal", icon: "fa-radiation" },
+      { id: "IV", label: "Unidad IV", sub: "Aplicaciones", type: "unit", icon: "fa-stethoscope" },
+      { id: "IV1", label: "IV.1", sub: "Evaluación", type: "normal", icon: "fa-clipboard-check" },
+      { id: "IV2", label: "IV.2", sub: "Terapéutica", type: "normal", icon: "fa-pills" },
+      { id: "IV3", label: "IV.3", sub: "Prevención", type: "normal", icon: "fa-hands-wash" },
+      { id: "V", label: "Unidad V", sub: "Vanguardia", type: "unit", icon: "fa-flask" },
+      { id: "V1", label: "V.1", sub: "Epigenética", type: "normal", icon: "fa-gene" },
+      { id: "V2", label: "V.2", sub: "Microbiota", type: "normal", icon: "fa-seedling" },
+      { id: "V3", label: "V.3", sub: "Biomarcadores", type: "normal", icon: "fa-chart-line" },
+      { id: "V4", label: "V.4", sub: "Células Madre", type: "normal", icon: "fa-leaf" },
+      { id: "V5", label: "V.5", sub: "Inflamación", type: "normal", icon: "fa-fire" },
+      { id: "V6", label: "V.6", sub: "Neurodegeneración", type: "normal", icon: "fa-atom" },
+      { id: "V7", label: "META", sub: "Envejecimiento", type: "final", icon: "fa-hourglass-end" },
+    ];
+
+    const unlocked = { inicio: true };
+    let lastUnlocked = "inicio";
+    let currentMode = "";
+    let currentActiveId = null;
+
+    function detectAndRender() {
+      const container = document.getElementById("board-container");
+      container.innerHTML = "";
+
+      if (window.innerWidth > 768) {
+        renderSpiral();
+      } else {
+        renderMobilePath();
+      }
+    }
+
+    function renderSpiral() {
+      const container = document.createElement("div");
+      container.className = "spiral-container";
+      const centerX = 400;
+      const centerY = 400;
+      const radius = 350;
+
+      tiles.forEach((tile, index) => {
+        if (tile.id === "V7") return;
+
+        const angle = (index / (tiles.length - 1)) * Math.PI * 4;
+        const r = radius * (1 - index / (tiles.length + 4));
+        const x = centerX + r * Math.cos(angle);
+        const y = centerY + r * Math.sin(angle);
+
+        const el = document.createElement("div");
+        el.className = `tile-spiral ${tile.type === 'unit' ? 'unit' : ''} ${unlocked[tile.id] ? '' : 'locked'}`;
+        el.id = `tile-${tile.id}`;
+        el.onclick = () => openModal(tile.id);
+
+        el.innerHTML = `
+          <i class="fas ${tile.icon}"></i>
+          <strong>${tile.label}</strong>
+          <span>${tile.sub}</span>
+        `;
+
+        container.appendChild(el);
+        el.style.left = `${x - 45}px`;
+        el.style.top = `${y - 45}px`;
+      });
+
+      const goal = document.createElement("div");
+      goal.className = `center-goal ${unlocked["V7"] ? "completed" : "locked"}`;
+      goal.id = "tile-V7";
+      goal.onclick = () => openModal("V7");
+      goal.innerHTML = `
+        <i class="fas fa-trophy"></i>
+        <strong>META FINAL</strong>
+        <span>V.7: Envejecimiento</span>
+      `;
+      container.appendChild(goal);
+
+      document.getElementById("board-container").appendChild(container);
+    }
+
+    function renderMobilePath() {
+      const container = document.createElement("div");
+      container.className = "mobile-path active";
+
+      tiles.forEach(tile => {
+        const el = document.createElement("div");
+        el.className = `tile-mobile ${tile.type === 'unit' ? 'unit' : ''} ${unlocked[tile.id] ? (tile.id === "V7" ? "completed" : "") : 'locked'}`;
+        el.id = `tile-${tile.id}`;
+        el.onclick = () => openModal(tile.id);
+
+        el.innerHTML = `
+          <i class="fas ${tile.icon}"></i>
+          <strong>${tile.label}</strong>
+          <span>${tile.sub}</span>
+        `;
+
+        container.appendChild(el);
+      });
+
+      const goal = document.createElement("div");
+      goal.className = `final-goal ${unlocked["V7"] ? "completed" : "locked"}`;
+      goal.id = "tile-V7";
+      goal.onclick = () => openModal("V7");
+      goal.innerHTML = `
+        <i class="fas fa-trophy"></i>
+        <strong>🏆 META FINAL</strong>
+        <span>V.7: Fisiopatología del Envejecimiento</span>
+      `;
+      container.appendChild(goal);
+
+      document.getElementById("board-container").appendChild(container);
+    }
+
+    function openModal(id) {
+      if (!unlocked[id]) {
+        alert("🔒 Este tema se desbloquea tras revisar el anterior en clase.");
+        return;
+      }
+
+      // Apagar todas las casillas
+      document.querySelectorAll('.tile-spiral, .tile-mobile').forEach(el => {
+        el.classList.remove('active-tile');
+        if (!el.classList.contains('locked')) {
+          el.classList.add('inactive-tile');
+        }
+      });
+
+      // Encender la actual
+      const activeEl = document.getElementById(`tile-${id}`);
+      if (activeEl) {
+        activeEl.classList.add('active-tile');
+        activeEl.classList.remove('inactive-tile');
+      }
+      currentActiveId = id;
+
+      const modal = document.getElementById("infoModal");
+      const title = document.getElementById("modalTitle");
+      const body = document.getElementById("modalBody");
+
+      switch(id) {
+        case "inicio":
+          title.textContent = " Bienvenido al Curso de Fisiopatología";
+          body.innerHTML = `
+            <p><strong>Clave:</strong> No especificada</p>
+            <p><strong>Ubicación:</strong> Tercer semestre | Área: Ciencias de la Salud</p>
+            <p><strong>Horas:</strong> 80 teóricas + 32 prácticas + 32 estudio independiente = 144 horas | <strong>Créditos:</strong> 9</p>
+            <h3>📚 Competencia del curso</h3>
+            <p>El estudiante desarrollará habilidades para comprender los mecanismos subyacentes de las enfermedades. Aprenderá a analizar los procesos patológicos a nivel celular, molecular y sistémico. Además, será capaz de aplicar este conocimiento para identificar signos tempranos de enfermedades y proponer estrategias de prevención y tratamiento.</p>
+            <h3>🔗 Unidades relacionadas</h3>
+            <p>Morfología humana, bioquímica, fisiología, bioética y bioseguridad.</p>
+            <button class="btn-next" onclick="unlockNext('unidad1'); closeModal()">➡️ Continuar con Unidad I</button>
+          `;
+          break;
+
+        case "unidad1":
+          title.textContent = "Unidad I: Fundamentos de Fisiopatología";
+          body.innerHTML = `
+            <p>Esta unidad establece las bases conceptuales y moleculares de la enfermedad.</p>
+            <button class="btn-next" onclick="unlockNext('I1'); closeModal()">➡️ Ir a I.1: Introducción</button>
+          `;
+          break;
+
+        case "I1":
+          title.textContent = "I.1: Introducción a la Fisiopatología desde una perspectiva biomédica";
+          body.innerHTML = `
+            <ul class="topic-list">
+              <li><strong>a) Concepto de fisiopatología:</strong> Estudio de los cambios funcionales que ocurren durante una enfermedad.</li>
+              <li><strong>b) Conceptos de salud, enfermedad, patogénesis y etiología:</strong> Definiciones y relaciones entre estos conceptos.</li>
+              <li><strong>c) Conceptos de síntoma, signo, síndrome y otros:</strong> Diferencias y relevancia clínica.</li>
+              <li><strong>d) Fisiopatología y la medicina basada en la evidencia:</strong> Rol de la fisiopatología en la toma de decisiones clínicas.</li>
+              <li><strong>e) La fisiopatología en la investigación biomédica:</strong> Aplicación de principios fisiopatológicos en estudios científicos.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('I2'); closeModal()">➡️ Siguiente: Bases celulares</button>
+          `;
+          break;
+
+        case "I2":
+          title.textContent = "I.2: Bases Celulares y Moleculares de las Enfermedades";
+          body.innerHTML = `
+            <ul class="topic-list">
+              <li><strong>a) Consideración de la homeostasis y desequilibrios:</strong> Mecanismos que mantienen la estabilidad y su alteración en la enfermedad.</li>
+              <li><strong>b) Agentes lesivos y mecanismos de lesión:</strong> Físicos, químicos, biológicos y genéticos.</li>
+              <li><strong>c) Mecanismos celulares de adaptación:</strong> Hipertrofia, hiperplasia, atrofia, metaplasia.</li>
+              <li><strong>d) Generalidades de los mecanismos patogénicos específicos:</strong> Apoptosis, necrosis, inflamación, disfunción metabólica.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('II'); closeModal()">➡️ Desbloquear Unidad II</button>
+          `;
+          break;
+
+        case "II":
+          title.textContent = "Unidad II: Órganos y Sistemas en Fisiopatología";
+          body.innerHTML = `
+            <p>Enfoque integrado en sistemas corporales y herramientas diagnósticas.</p>
+            <button class="btn-next" onclick="unlockNext('II1'); closeModal()">➡️ Ir a II.1: Estudio general</button>
+          `;
+          break;
+
+        case "II1":
+          title.textContent = "II.1: Estudio general de la fisiopatología por órganos y sistemas";
+          body.innerHTML = `
+            <p>Análisis de la fisiopatología desde una perspectiva sistémica: cardiovascular, respiratorio, renal, nervioso, digestivo, endócrino, etc.</p>
+            <p>Se estudian las alteraciones funcionales comunes y específicas en cada sistema.</p>
+            <button class="btn-next" onclick="unlockNext('II2'); closeModal()">➡️ Siguiente: Marcadores</button>
+          `;
+          break;
+
+        case "II2":
+          title.textContent = "II.2: Identificación de marcadores y procesos específicos relevantes para el diagnóstico clínico y la investigación biomédica";
+          body.innerHTML = `
+            <p>Uso de biomarcadores para diagnóstico clínico y monitoreo de enfermedades.</p>
+            <ul class="topic-list">
+              <li>Tipos de biomarcadores (genéticos, proteicos, metabólicos).</li>
+              <li>Aplicación en investigación biomédica.</li>
+              <li>Relación con procesos fisiopatológicos específicos.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('III'); closeModal()">➡️ Desbloquear Unidad III</button>
+          `;
+          break;
+
+        case "III":
+          title.textContent = "Unidad III: Enfermedades y Trastornos Específicos desde la Clínica y la Investigación Biomédica";
+          body.innerHTML = `
+            <p>Estudio detallado de enfermedades desde la clínica y la investigación.</p>
+            <button class="btn-next" onclick="unlockNext('III1'); closeModal()">➡️ Ir a III.1: Inmunológica</button>
+          `;
+          break;
+
+        case "III1":
+          title.textContent = "III.1: Patología inmunológica e inflamatoria";
+          body.innerHTML = `
+            <p>Estudio de enfermedades autoinmunes, alergias, enfermedades inflamatorias crónicas.</p>
+            <ul class="topic-list">
+              <li>Desregulación del sistema inmune.</li>
+              <li>Hipersensibilidad (tipos I a IV).</li>
+              <li>Autoinmunidad (lupus, artritis reumatoide).</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('III2'); closeModal()">➡️ Siguiente: Infecciosas</button>
+          `;
+          break;
+
+        case "III2":
+          title.textContent = "III.2: Enfermedades infecciosas";
+          body.innerHTML = `
+            <p>Mecanismos de invasión microbiana y respuesta del huésped.</p>
+            <ul class="topic-list">
+              <li>Patógenos bacterianos, virales, fúngicos y parasitarios.</li>
+              <li>Respuesta inmune a infecciones.</li>
+              <li>Alteraciones sistémicas (sepsis, shock séptico).</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('III3'); closeModal()">➡️ Siguiente: Metabólicas</button>
+          `;
+          break;
+
+        case "III3":
+          title.textContent = "III.3: Enfermedades metabólicas y nutricionales";
+          body.innerHTML = `
+            <p>Alteraciones en el metabolismo y nutrición.</p>
+            <ul class="topic-list">
+              <li>Diabetes mellitus y complicaciones.</li>
+              <li>Obesidad, dislipidemias y síndrome metabólico.</li>
+              <li>Trastornos nutricionales (carenciales, exceso).</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('III4'); closeModal()">➡️ Siguiente: Neurológicas</button>
+          `;
+          break;
+
+        case "III4":
+          title.textContent = "III.4: Enfermedades neurológicas";
+          body.innerHTML = `
+            <p>Alteraciones del sistema nervioso central y periférico.</p>
+            <ul class="topic-list">
+              <li>Epilepsia, trastornos del movimiento, enfermedades cerebrovasculares.</li>
+              <li>Trastornos del desarrollo neurológico.</li>
+              <li>Neuropatías periféricas.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('III5'); closeModal()">➡️ Siguiente: Oncológicas</button>
+          `;
+          break;
+
+        case "III5":
+          title.textContent = "III.5: Enfermedades oncológicas";
+          body.innerHTML = `
+            <p>Estudio de la carcinogénesis y progresión tumoral.</p>
+            <ul class="topic-list">
+              <li>Carcinogénesis: iniciación, promoción, progresión.</li>
+              <li>Alteraciones genéticas y epigenéticas en el cáncer.</li>
+              <li>Metástasis y microambiente tumoral.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('IV'); closeModal()">➡️ Desbloquear Unidad IV</button>
+          `;
+          break;
+
+        case "IV":
+          title.textContent = "Unidad IV: Aplicaciones Clínicas y Terapéuticas de la Fisiopatología";
+          body.innerHTML = `
+            <p>Vinculación entre teoría fisiopatológica y práctica clínica.</p>
+            <button class="btn-next" onclick="unlockNext('IV1'); closeModal()">➡️ Ir a IV.1: Evaluación clínica</button>
+          `;
+          break;
+
+        case "IV1":
+          title.textContent = "IV.1: Fisiopatología en la evaluación clínica y diagnóstica desde una perspectiva investigativa";
+          body.innerHTML = `
+            <p>Uso de la fisiopatología para interpretar signos y síntomas.</p>
+            <ul class="topic-list">
+              <li>Correlación entre mecanismos y manifestaciones clínicas.</li>
+              <li>Pruebas diagnósticas desde una perspectiva investigativa.</li>
+              <li>Análisis de casos clínicos.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('IV2'); closeModal()">➡️ Siguiente: Terapéutica</button>
+          `;
+          break;
+
+        case "IV2":
+          title.textContent = "IV.2: Relación entre fisiopatología y terapéutica basada en la evidencia científica";
+          body.innerHTML = `
+            <p>Relación entre mecanismos de enfermedad y tratamiento.</p>
+            <ul class="topic-list">
+              <li>Fármacos y su acción sobre procesos fisiopatológicos.</li>
+              <li>Evaluación de resultados clínicos.</li>
+              <li>Terapias emergentes.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('IV3'); closeModal()">➡️ Siguiente: Prevención</button>
+          `;
+          break;
+
+        case "IV3":
+          title.textContent = "IV.3: La prevención y promoción de la salud en el contexto de la investigación biomédica: Exploración de factores de riesgo relevantes";
+          body.innerHTML = `
+            <p>Exploración de factores de riesgo y estrategias preventivas.</p>
+            <ul class="topic-list">
+              <li>Prevención primaria, secundaria y terciaria.</li>
+              <li>Papel de la investigación biomédica en la promoción de la salud.</li>
+              <li>Factores de riesgo modificables.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V'); closeModal()">➡️ Desbloquear Unidad V</button>
+          `;
+          break;
+
+        case "V":
+          title.textContent = "Unidad V: Tópicos de Vanguardia en Fisiopatología";
+          body.innerHTML = `
+            <p>Avances recientes en investigación biomédica.</p>
+            <button class="btn-next" onclick="unlockNext('V1'); closeModal()">➡️ Ir a V.1: Epigenética</button>
+          `;
+          break;
+
+        case "V1":
+          title.textContent = "V.1: Epigenética y Enfermedad";
+          body.innerHTML = `
+            <p>Regulación génica sin cambios en la secuencia de ADN.</p>
+            <ul class="topic-list">
+              <li>Mecanismos: metilación, acetilación, ARN no codificantes.</li>
+              <li>Relación con cáncer, neurodegeneración y enfermedades metabólicas.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V2'); closeModal()">➡️ Siguiente: Microbiota</button>
+          `;
+          break;
+
+        case "V2":
+          title.textContent = "V.2: Microbiota y Salud";
+          body.innerHTML = `
+            <p>El microbioma intestinal y su impacto en la salud sistémica.</p>
+            <ul class="topic-list">
+              <li>Relación con enfermedades autoinmunes, metabólicas y neurológicas.</li>
+              <li>Terapias basadas en microbiota (probióticos, trasplante fecal).</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V3'); closeModal()">➡️ Siguiente: Biomarcadores</button>
+          `;
+          break;
+
+        case "V3":
+          title.textContent = "V.3: Biomarcadores y Medicina Personalizada";
+          body.innerHTML = `
+            <p>Uso de biomarcadores para diagnóstico y tratamiento individualizado.</p>
+            <ul class="topic-list">
+              <li>Genómica, proteómica, metabolómica.</li>
+              <li>Aplicaciones en oncología y enfermedades crónicas.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V4'); closeModal()">➡️ Siguiente: Células Madre</button>
+          `;
+          break;
+
+        case "V4":
+          title.textContent = "V.4: Células Madre y Regeneración Tisular";
+          body.innerHTML = `
+            <p>Potencial de las células madre en la medicina regenerativa.</p>
+            <ul class="topic-list">
+              <li>Tipos: embrionarias, adultas, iPSC.</li>
+              <li>Aplicaciones en enfermedades neurológicas, cardíacas y metabólicas.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V5'); closeModal()">➡️ Siguiente: Inflamación Crónica</button>
+          `;
+          break;
+
+        case "V5":
+          title.textContent = "V.5: Inflamación Crónica y Enfermedades";
+          body.innerHTML = `
+            <p>La inflamación persistente como base de enfermedades crónicas.</p>
+            <ul class="topic-list">
+              <li>Relación con cáncer, diabetes, enfermedades cardiovasculares y neurodegenerativas.</li>
+              <li>Mecanismos moleculares y terapias emergentes.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V6'); closeModal()">➡️ Siguiente: Neurodegeneración</button>
+          `;
+          break;
+
+        case "V6":
+          title.textContent = "V.6: Neurodegeneración y Plasticidad Neuronal";
+          body.innerHTML = `
+            <p>Alteraciones en neuronas y circuitos cerebrales.</p>
+            <ul class="topic-list">
+              <li>Alzheimer, Parkinson, ELA.</li>
+              <li>Plasticidad sináptica y potencial regenerativo.</li>
+              <li>Avances en neurorrehabilitación.</li>
+            </ul>
+            <button class="btn-next" onclick="unlockNext('V7'); closeModal()">🎯 Ir a la Meta Final</button>
+          `;
+          break;
+
+        case "V7":
+          if (!unlocked["V7"]) {
+            alert("🔒 Este tema se desbloquea al final del curso.");
+            return;
+          }
+          title.textContent = "V.7: Fisiopatología del Envejecimiento";
+          body.innerHTML = `
+            <p>Estudio de los cambios biológicos asociados al envejecimiento.</p>
+            <ul class="topic-list">
+              <li>Teorías del envejecimiento (genéticas, oxidativas, inflamatorias).</li>
+              <li>Deterioro celular, tisular y sistémico.</li>
+              <li>Enfermedades asociadas al envejecimiento.</li>
+              <li>Investigación en longevidad y calidad de vida.</li>
+            </ul>
+            <p>🎓 <strong>¡Has completado el recorrido del encuadre!</strong> Este curso te preparará para comprender y abordar los mecanismos de la enfermedad desde una perspectiva científica y humanista.</p>
+            <button class="btn-contract" onclick="openForm()">🖋️ Firmar Contrato de Compromiso</button>
+          `;
+          break;
+
+        default:
+          title.textContent = "Contenido";
+          body.innerHTML = "<p>Contenido en desarrollo.</p>";
+          break;
+      }
+
+      modal.style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("infoModal").style.display = "none";
+
+      // Restaurar brillo a todas las casillas
+      document.querySelectorAll('.tile-spiral, .tile-mobile').forEach(el => {
+        el.classList.remove('active-tile', 'inactive-tile');
+      });
+    }
+
+    function unlockNext(id) {
+      unlocked[id] = true;
+      lastUnlocked = id;
+      setTimeout(() => detectAndRender(), 100);
+    }
+
+    // --- FORMULARIO Y FIRMA ---
+    function openForm() {
+      document.getElementById("infoModal").style.display = "none";
+      document.getElementById("formModal").style.display = "flex";
+
+      if (!canvasForm) {
+        canvasForm = document.createElement("canvas");
+        canvasForm.id = "canvasForm";
+        const rect = document.getElementById("signature-pad-form").getBoundingClientRect();
+        canvasForm.width = 400;
+        canvasForm.height = 120;
+        canvasForm.style.width = "100%";
+        canvasForm.style.height = "120px";
+        document.getElementById("signature-pad-form").appendChild(canvasForm);
+        ctxForm = canvasForm.getContext("2d");
+        ctxForm.lineWidth = 2;
+        ctxForm.lineCap = "round";
+        ctxForm.strokeStyle = "#000";
+
+        // Mouse
+        canvasForm.addEventListener("mousedown", startDrawing);
+        canvasForm.addEventListener("mousemove", draw);
+        window.addEventListener("mouseup", stopDrawing);
+
+        // Touch - Corrección completa para dispositivos táctiles
+        canvasForm.addEventListener("touchstart", handleTouchStart, { passive: false });
+        canvasForm.addEventListener("touchmove", handleTouchMove, { passive: false });
+        window.addEventListener("touchend", stopDrawing);
+      }
+    }
+
+    function closeForm() {
+      document.getElementById("formModal").style.display = "none";
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const rect = canvasForm.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctxForm.beginPath();
+      ctxForm.moveTo(x, y);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const rect = canvasForm.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctxForm.lineTo(x, y);
+      ctxForm.stroke();
+    }
+
+    function handleTouchStart(e) {
+      e.preventDefault();
+      isDrawing = true;
+      const rect = canvasForm.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      ctxForm.beginPath();
+      ctxForm.moveTo(x, y);
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+      if (!isDrawing) return;
+      const rect = canvasForm.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      ctxForm.lineTo(x, y);
+      ctxForm.stroke();
+    }
+
+    function stopDrawing() {
+      if (isDrawing) {
+        ctxForm.closePath();
+        isDrawing = false;
+      }
+    }
+
+    function clearSignatureForm() {
+      if (canvasForm) {
+        ctxForm.clearRect(0, 0, canvasForm.width, canvasForm.height);
+      }
+    }
+
+    function submitForm() {
+      const nombre = document.getElementById("nombre").value.trim();
+      const matricula = document.getElementById("matricula").value.trim() || "No especificada";
+      const gradoGrupo = document.getElementById("gradoGrupo").value.trim();
+
+      if (!nombre || !gradoGrupo) {
+        alert("Por favor, completa todos los campos obligatorios.");
+        return;
+      }
+
+      if (!isSignatureDrawn()) {
+        alert("Por favor, firma en el área correspondiente.");
+        return;
+      }
+
+      // Extraer grado y grupo
+      const [grado = "Tercer semestre", grupo = "No especificado"] = gradoGrupo.split("grupo").map(s => s.trim());
+
+      // Llenar contrato
+      document.getElementById("cNombre").textContent = nombre;
+      document.getElementById("cMatricula").textContent = matricula;
+      document.getElementById("cGrado").textContent = grado;
+      document.getElementById("cGrupo").textContent = grupo;
+      document.getElementById("cFecha").textContent = new Date().toLocaleDateString('es-MX');
+      document.getElementById("cNombre2").textContent = nombre;
+      document.getElementById("cMatricula2").textContent = matricula;
+      document.getElementById("cGradoGrupo").textContent = `${grado}, grupo ${grupo}`;
+
+      // Copiar firma al canvas de impresión
+      const canvasPrint = document.getElementById("signature-print");
+      const ctxPrint = canvasPrint.getContext("2d");
+      ctxPrint.clearRect(0, 0, canvasPrint.width, canvasPrint.height);
+      ctxPrint.drawImage(canvasForm, 0, 0);
+
+      // Mostrar contrato
+      closeForm();
+      document.getElementById("contractModal").style.display = "flex";
+    }
+
+    function isSignatureDrawn() {
+      if (!canvasForm) return false;
+      const data = ctxForm.getImageData(0, 0, canvasForm.width, canvasForm.height).data;
+      return data.some(value => value !== 0);
+    }
+
+    function printContract() {
+      const printContent = document.getElementById("contractPrintArea");
+      const originalBody = document.body.innerHTML;
+      document.body.innerHTML = printContent.innerHTML;
+      window.print();
+      document.body.innerHTML = originalBody;
+      window.location.reload();
+    }
+
+    function closeContract() {
+      document.getElementById("contractModal").style.display = "none";
+    }
+
+    window.onload = detectAndRender;
+    window.onresize = function() {
+      clearTimeout(window.resizeTimer);
+      window.resizeTimer = setTimeout(detectAndRender, 250);
+    };
+  </script>
+</body>
+</html>
