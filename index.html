@@ -899,10 +899,13 @@
         canvasForm = document.createElement("canvas");
         canvasForm.id = "canvasForm";
         const rect = document.getElementById("signature-pad-form").getBoundingClientRect();
+        
+        // Asegurar dimensiones reales del canvas
         canvasForm.width = 400;
         canvasForm.height = 120;
         canvasForm.style.width = "100%";
         canvasForm.style.height = "120px";
+        
         document.getElementById("signature-pad-form").appendChild(canvasForm);
         ctxForm = canvasForm.getContext("2d");
         ctxForm.lineWidth = 2;
@@ -914,7 +917,7 @@
         canvasForm.addEventListener("mousemove", draw);
         window.addEventListener("mouseup", stopDrawing);
 
-        // Touch - Corrección completa para dispositivos táctiles
+        // Touch - Corrección total del desfase
         canvasForm.addEventListener("touchstart", handleTouchStart, { passive: false });
         canvasForm.addEventListener("touchmove", handleTouchMove, { passive: false });
         window.addEventListener("touchend", stopDrawing);
@@ -925,44 +928,48 @@
       document.getElementById("formModal").style.display = "none";
     }
 
-    function startDrawing(e) {
-      isDrawing = true;
+    function getCoordinates(e) {
       const rect = canvasForm.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      let x, y;
+
+      if (e.type.includes('touch')) {
+        const touch = e.touches[0];
+        x = touch.clientX - rect.left;
+        y = touch.clientY - rect.top;
+      } else {
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+      }
+
+      // Ajustar a las dimensiones reales del canvas
+      const scaleX = canvasForm.width / rect.width;
+      const scaleY = canvasForm.height / rect.height;
+
+      return { x: x * scaleX, y: y * scaleY };
+    }
+
+    function startDrawing(e) {
+      e.preventDefault();
+      isDrawing = true;
+      const { x, y } = getCoordinates(e);
       ctxForm.beginPath();
       ctxForm.moveTo(x, y);
     }
 
     function draw(e) {
       if (!isDrawing) return;
-      const rect = canvasForm.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      e.preventDefault();
+      const { x, y } = getCoordinates(e);
       ctxForm.lineTo(x, y);
       ctxForm.stroke();
     }
 
     function handleTouchStart(e) {
-      e.preventDefault();
-      isDrawing = true;
-      const rect = canvasForm.getBoundingClientRect();
-      const touch = e.touches[0];
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      ctxForm.beginPath();
-      ctxForm.moveTo(x, y);
+      startDrawing(e);
     }
 
     function handleTouchMove(e) {
-      e.preventDefault();
-      if (!isDrawing) return;
-      const rect = canvasForm.getBoundingClientRect();
-      const touch = e.touches[0];
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      ctxForm.lineTo(x, y);
-      ctxForm.stroke();
+      draw(e);
     }
 
     function stopDrawing() {
