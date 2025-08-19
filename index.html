@@ -401,7 +401,10 @@
       <p><strong>Lugar y fecha:</strong> Culiacán, Sinaloa, a <span id="cFecha"></span></p>
       <br>
       <p><strong>Firma del estudiante:</strong></p>
-      <canvas id="signature-print" width="400" height="120" style="border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%;"></canvas>
+      <!-- Imagen de la firma (inicialmente oculta) -->
+      <img id="signature-img" src="" alt="Firma del estudiante" style="display: none; border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; height: 120px; object-fit: contain;">
+      <!-- Canvas solo para dibujo (no se imprime) -->
+      <canvas id="signature-canvas" width="400" height="120" style="border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%;"></canvas>
       <br>
       <p><strong>Nombre:</strong> <span id="cNombre2"></span></p>
       <p><strong>Matrícula:</strong> <span id="cMatricula2"></span></p>
@@ -413,13 +416,11 @@
     </div>
   </div>
 
-  <!-- iframe oculto para impresión -->
-  <iframe id="printFrame" style="display: none;"></iframe>
-
   <script>
     // Canvas para firma
     let canvasForm, ctxForm;
     let isDrawing = false;
+    let signatureImage = null; // Almacena la firma como imagen
 
     const tiles = [
       { id: "inicio", label: "Inicio", sub: "", type: "normal", icon: "fa-home" },
@@ -1016,11 +1017,15 @@
       document.getElementById("cMatricula2").textContent = matricula;
       document.getElementById("cGradoGrupo").textContent = `${grado}, grupo ${grupo}`;
 
-      // Copiar firma al canvas de impresión
-      const canvasPrint = document.getElementById("signature-print");
-      const ctxPrint = canvasPrint.getContext("2d");
-      ctxPrint.clearRect(0, 0, canvasPrint.width, canvasPrint.height);
-      ctxPrint.drawImage(canvasForm, 0, 0);
+      // Convertir firma a imagen
+      signatureImage = canvasForm.toDataURL("image/png");
+
+      // Mostrar imagen y ocultar canvas
+      const img = document.getElementById("signature-img");
+      const canvas = document.getElementById("signature-canvas");
+      img.src = signatureImage;
+      img.style.display = "block";
+      canvas.style.display = "none";
 
       // Mostrar contrato
       closeForm();
@@ -1034,40 +1039,26 @@
     }
 
     function printContract() {
-      const printFrame = document.getElementById("printFrame");
       const printContent = document.getElementById("contractPrintArea");
+      const originalDisplay = document.getElementById("signature-canvas").style.display;
 
-      // Clonar el contenido para impresión
-      const content = printContent.cloneNode(true);
+      // Asegurar que se muestre la imagen
+      document.getElementById("signature-canvas").style.display = "none";
+      document.getElementById("signature-img").style.display = "block";
 
-      // Asegurar que la firma se copie correctamente
-      const canvasSource = document.getElementById("canvasForm");
-      const canvasTarget = content.querySelector("#signature-print");
-      const ctxTarget = canvasTarget.getContext("2d");
-      ctxTarget.clearRect(0, 0, canvasTarget.width, canvasTarget.height);
-      ctxTarget.drawImage(canvasSource, 0, 0);
+      const printWindow = window.open('', '', 'height=600,width=800');
+      printWindow.document.write('<html><head><title>Contrato de Compromiso</title>');
+      printWindow.document.write('<style>body { font-family: Georgia, serif; padding: 30px; } img { border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; height: 120px; object-fit: contain; }</style>');
+      printWindow.document.write('</head><body>');
+      printWindow.document.write(printContent.innerHTML);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
 
-      // Escribir en el iframe
-      printFrame.contentDocument.open();
-      printFrame.contentDocument.write(`
-        <html>
-          <head>
-            <title>Contrato de Compromiso</title>
-            <style>
-              body { font-family: 'Georgia', serif; padding: 30px; }
-              canvas { border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; }
-            </style>
-          </head>
-          <body>
-            ${content.innerHTML}
-          </body>
-        </html>
-      `);
-      printFrame.contentDocument.close();
-
-      // Imprimir desde el iframe
-      printFrame.contentWindow.focus();
-      printFrame.contentWindow.print();
+      // Restaurar estado (opcional)
+      document.getElementById("signature-canvas").style.display = originalDisplay;
     }
 
     function closeContract() {
