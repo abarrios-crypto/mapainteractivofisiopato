@@ -385,7 +385,11 @@
   <div class="contract-modal" id="contractModal">
     <div class="contract-content" id="contractPrintArea">
       <h2 style="text-align: center;">📜 Contrato de Compromiso del Estudiante</h2>
+      <p style="text-align: center; font-style: italic;"><em>UNIVERSIDAD AUTÓNOMA DE SINALOA</em></p>
+      <p style="text-align: center; font-style: italic;"><em>Facultad de Biología</em></p>
+      <p style="text-align: center; font-style: italic;"><em>Licenciatura en Biomedicina</em></p>
       <p style="text-align: center; font-style: italic;"><em>Unidad de Aprendizaje: Fisiopatología</em></p>
+      <p style="text-align: center; font-style: italic;"><em>Docente: M.C. Adriana A. Barrios Rodríguez</em></p>
       <br>
       <p>Yo, <strong id="cNombre"></strong>, matrícula <span id="cMatricula"></span>, estudiante del <span id="cGrado"></span>, grupo <span id="cGrupo"></span>, declaro bajo protesta de decir verdad que:</p>
       <br>
@@ -401,10 +405,10 @@
       <p><strong>Lugar y fecha:</strong> Culiacán, Sinaloa, a <span id="cFecha"></span></p>
       <br>
       <p><strong>Firma del estudiante:</strong></p>
-      <!-- Imagen de la firma (inicialmente oculta) -->
-      <img id="signature-img" src="" alt="Firma del estudiante" style="display: none; border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; height: 120px; object-fit: contain;">
-      <!-- Canvas solo para dibujo (no se imprime) -->
-      <canvas id="signature-canvas" width="400" height="120" style="border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%;"></canvas>
+      <!-- Imagen de la firma (para impresión) -->
+      <img id="signature-img" src="" alt="Firma del estudiante" style="border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; height: 120px; object-fit: contain;">
+      <!-- Canvas oculto para dibujo -->
+      <canvas id="signature-canvas" width="400" height="120" style="display: none;"></canvas>
       <br>
       <p><strong>Nombre:</strong> <span id="cNombre2"></span></p>
       <p><strong>Matrícula:</strong> <span id="cMatricula2"></span></p>
@@ -416,11 +420,14 @@
     </div>
   </div>
 
+  <!-- iframe oculto para impresión -->
+  <iframe id="printFrame" style="display: none;"></iframe>
+
   <script>
     // Canvas para firma
     let canvasForm, ctxForm;
     let isDrawing = false;
-    let signatureImage = null; // Almacena la firma como imagen
+    let signatureImage = null;
 
     const tiles = [
       { id: "inicio", label: "Inicio", sub: "", type: "normal", icon: "fa-home" },
@@ -574,13 +581,17 @@
         case "inicio":
           title.textContent = " Bienvenido al Curso de Fisiopatología";
           body.innerHTML = `
-            <p><strong>Clave:</strong> No especificada</p>
+            <p><strong>Instrucciones</strong> Avanza en este mapa interactivo para conocer el contenido de tu Unidad de Aprendizaje</p>
             <p><strong>Ubicación:</strong> Tercer semestre | Área: Ciencias de la Salud</p>
             <p><strong>Horas:</strong> 80 teóricas + 32 prácticas + 32 estudio independiente = 144 horas | <strong>Créditos:</strong> 9</p>
             <h3>📚 Competencia del curso</h3>
             <p>El estudiante desarrollará habilidades para comprender los mecanismos subyacentes de las enfermedades. Aprenderá a analizar los procesos patológicos a nivel celular, molecular y sistémico. Además, será capaz de aplicar este conocimiento para identificar signos tempranos de enfermedades y proponer estrategias de prevención y tratamiento.</p>
             <h3>🔗 Unidades relacionadas</h3>
             <p>Morfología humana, bioquímica, fisiología, bioética y bioseguridad.</p>
+            <h3>📋 Criterios de evaluación</h3>
+            <p>Actividades en clase y actividades de estudio independiente: 30% | Evaluaciones parciales: 20% | Evaluación práctica 30% |Actividad integradora teórico-práctica: 20%</p>
+            <h3>👩🏻‍🏫 Impartido por:</h3>
+            <p>M.C. Adriana Alicia Barrios Rodríguez</p>
             <button class="btn-next" onclick="unlockNext('unidad1'); closeModal()">➡️ Continuar con Unidad I</button>
           `;
           break;
@@ -1024,7 +1035,6 @@
       const img = document.getElementById("signature-img");
       const canvas = document.getElementById("signature-canvas");
       img.src = signatureImage;
-      img.style.display = "block";
       canvas.style.display = "none";
 
       // Mostrar contrato
@@ -1039,26 +1049,41 @@
     }
 
     function printContract() {
+      const printFrame = document.getElementById("printFrame");
       const printContent = document.getElementById("contractPrintArea");
-      const originalDisplay = document.getElementById("signature-canvas").style.display;
 
-      // Asegurar que se muestre la imagen
-      document.getElementById("signature-canvas").style.display = "none";
-      document.getElementById("signature-img").style.display = "block";
+      try {
+        // Clonar contenido
+        const content = printContent.cloneNode(true);
 
-      const printWindow = window.open('', '', 'height=600,width=800');
-      printWindow.document.write('<html><head><title>Contrato de Compromiso</title>');
-      printWindow.document.write('<style>body { font-family: Georgia, serif; padding: 30px; } img { border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; height: 120px; object-fit: contain; }</style>');
-      printWindow.document.write('</head><body>');
-      printWindow.document.write(printContent.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+        // Asegurar que la firma se copie como imagen
+        const img = content.querySelector("#signature-img");
+        if (signatureImage) {
+          img.src = signatureImage;
+        }
 
-      // Restaurar estado (opcional)
-      document.getElementById("signature-canvas").style.display = originalDisplay;
+        // Escribir en el iframe
+        printFrame.contentDocument.open();
+        printFrame.contentDocument.write(`
+          <html>
+            <head>
+              <title>Contrato de Compromiso</title>
+              <style>
+                body { font-family: 'Georgia', serif; padding: 30px; }
+                img { border: 2px dashed #b58a8a; background: #fdf6f2; width: 100%; height: 120px; object-fit: contain; }
+              </style>
+            </head>
+            <body onload="window.focus(); window.print();">
+              ${content.innerHTML}
+            </body>
+          </html>
+        `);
+        printFrame.contentDocument.close();
+
+      } catch (error) {
+        console.error("Error al imprimir:", error);
+        alert("Hubo un error al generar la impresión. Asegúrate de permitir ventanas emergentes.");
+      }
     }
 
     function closeContract() {
